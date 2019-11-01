@@ -10,12 +10,14 @@ import Constants
 from Snake import Snake
 from Food import Food
 from Action import Action
+from typing import List
 
 class Game:
-    def __init__(self, numOfSnakes=Constants.numberOfSnakes, gridSize=Constants.gridSize, maxEpisodeLength=Constants.globalEpisodeLength):
-        self.snakes = []
+    def __init__(self, numOfSnakes: int =Constants.numberOfSnakes, gridSize: int =Constants.gridSize,
+                 maxEpisodeLength: int =Constants.globalEpisodeLength):
+        self.snakes: List = []  # empty list of snakes
         for idx in range(numOfSnakes):
-            self.snakes.append(Snake(idx) )
+            self.snakes.append(Snake(idx) )  # adds snakes to the list
 
         self.food = Food(Snake.snakeList)
         self.gameLength = maxEpisodeLength
