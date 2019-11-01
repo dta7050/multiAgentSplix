@@ -12,6 +12,7 @@ from Food import Food
 from Action import Action
 from typing import List
 
+
 class Game:
     def __init__(self, numOfSnakes: int =Constants.numberOfSnakes, gridSize: int =Constants.gridSize,
                  maxEpisodeLength: int =Constants.globalEpisodeLength):

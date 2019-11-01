@@ -19,13 +19,25 @@ pygame.init()  # Initializes all pygame modules
 
 """Used to draw the score"""
 
-def draw_text(surf, text, size,x,y,color):
+
+def draw_text(surf: Surface, text: str, size: int, x: int, y: int, color: tuple):
+    """
+    Function to draw text on the game screen
+    :param surf: a pygame surface for the text to be printed on
+    :param text: string of text to be displayed
+    :param size: font size of the text
+    :param x: x coordinate of the text
+    :param y: y coordinate of the text
+    :param color: tuple containing RGB color values of text
+    :return: function doesn't return anything
+    """
     font_name = pygame.font.match_font('arial')
     font = pygame.font.Font(font_name, size)
     text_surface = font.render(text, True, color)
     text_rect = text_surface.get_rect()
     text_rect.midtop = (x, y)
-    surf.blit(text_surface,text_rect)
+    surf.blit(text_surface, text_rect)
+
 
 """Convert coordinates into pygame coordinates (lower-left => top left)."""
 def to_pygame(p):
