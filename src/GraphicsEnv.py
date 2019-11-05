@@ -20,7 +20,7 @@ pygame.init()  # Initializes all pygame modules
 """Used to draw the score"""
 
 
-def draw_text(surf: Surface, text: str, size: int, x: int, y: int, color: tuple):
+def draw_text(surf: , text: str, size: int, x: int, y: int, color: tuple):
     """
     Function to draw text on the game screen
     :param surf: a pygame surface for the text to be printed on
@@ -40,25 +40,33 @@ def draw_text(surf: Surface, text: str, size: int, x: int, y: int, color: tuple)
 
 
 """Convert coordinates into pygame coordinates (lower-left => top left)."""
-def to_pygame(p):
+def to_pygame(p) -> int:
 
     return (p.x, Constants.gridSize-p.y)
 
 
-def manual_action_list(g,event):
+def manual_action_list(g, event) -> list:
     """
-    This initialization may be a bit computation intensive, but added this line here for representation of two or more snakes
+    Function to determine where to move each snake. Iterates through each snake assigning an action to each one. If the
+    user is playing the game, it reads the button presses and assigns an action accordingly
+    :param g: An object of class Game. Stores information about the current state of the game
+    :param event: Some kind of game event such as a button press. Used to identify if a button was pressed
+    :return: A list of each snake's next action
+    """
+    """
+    This initialization may be a bit computation intensive, but added this line here for representation
+    of two or more snakes
     Else can simply initialize to 0
     """
     actionsList = [0]*Constants.numberOfSnakes
-    for i, snake in enumerate(g.snakes):
+    for i, snake in enumerate(g.snakes):  # iterates through each snake
         if not snake.alive:
             actionsList[i] = None
         else:
-            actionsList[i] = random.choice(snake.permissible_actions())
+            actionsList[i] = random.choice(snake.permissible_actions())  # assigns a random action to the snake
 
-    if g.snakes[0].alive: # user's snake
-        keys = pygame.key.get_pressed() #To get the keys pressed by user
+    if g.snakes[0].alive:   # user's snake
+        keys = pygame.key.get_pressed()  # To get the keys pressed by user
         if g.snakes[0].joints == []:
             defaultaction = g.snakes[0].findDirection(g.snakes[0].head, g.snakes[0].end)
         else:
