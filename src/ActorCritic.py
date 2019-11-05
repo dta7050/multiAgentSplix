@@ -1,7 +1,7 @@
-''' This file contains the implementation of the actor critic algorithm. It
+""" This file contains the implementation of the actor critic algorithm. It
 contains helper methods to get policy and feature vector that are necessary
 for the algorithm. It also contains a method to run the game on a graphical user
-interface once the agent has been trained '''
+interface once the agent has been trained """
 
 import numpy as np
 import os
@@ -13,10 +13,21 @@ from Agent import *
 from Action import Action
 from Point import Point
 from Game import Game
+from Snake import Snake
+from numpy import asarray, ndarray
 
-''' Returns the normalised feature vector which is a combination of the state
-points and the action'''
-def getFeatureVector(state, action):
+""" Returns the normalised feature vector which is a combination of the state
+points and the action"""
+
+
+def getFeatureVector(state: ndarray, action: Action) -> ndarray:
+    """
+    Function takes in a state and an action then iterates through each feature of the state and uses that and the
+    value of the action to compute each feature in the feature vector.
+    :param state: Current state of the environment
+    :param action: A potential action the agent can take
+    :return: A vector containing feature values
+    """
     featureVector = []  # s*a, s^2*a^2
     actionValue = action.value + 1
     for feature in state:
@@ -25,34 +36,80 @@ def getFeatureVector(state, action):
         featureVector.append(feature**2 * actionValue**2 / 16)
     return np.asarray(featureVector)
 
+
 ''' Returns the numerical preferences given the feature vector and the theta parameter.
 Numerical preferences is a linear function approximation in theta parameter '''
-def getNumericalPreferences(snake, state, theta):
+
+
+def getNumericalPreferences(snake: Snake, state: ndarray, theta: ndarray) -> list[ndarray]:
+    """
+    This function computes a feature vector and then uses a vector of theta values and uses them to
+    compute of vector of numerical preferences that correspond to how good each feature value is
+    :param snake: The current snake
+    :param state: The current state of the environment
+    :param theta: Array of parameters to quantify how good each state-action pair is
+    :return: List of numerical preferences
+    """
     numericalPreferenceList = []
     for action in snake.permissible_actions():
         featureVector = getFeatureVector(state, action)
-        numericalPreference = np.dot(theta.T, featureVector)
+        numericalPreference = np.dot(theta.T, featureVector)  # dot product of theta transpose and featureVector
         numericalPreferenceList.append(numericalPreference)
 
     return numericalPreferenceList
 
+
 ''' Returns the softmax policy for the given state, action and theta parameter '''
-def getPolicy(snake, state, theta, action):
+
+
+def getPolicy(snake: Snake, state: ndarray, theta: ndarray, action: Action) -> float:
+    """
+    Computes the probability to take a given action. The more optimal the action, the
+    higher the probability it has
+    :param snake: The current snake
+    :param state: The current state of the environment
+    :param theta: Array of parameters to quantify how good each state-action pair is
+    :param action: The action in question which is used to calculate the probability
+    :return: A decimal number between 0 and 1 corresponding to the probability of
+             the action in question
+    """
     featureVector = getFeatureVector(state, action)
     numericalPreference = np.dot(theta.T, featureVector)    # h(s, a, theta)
     numericalPreferenceList = getNumericalPreferences(snake, state, theta)
 
-    return (np.exp(numericalPreference) / np.sum( np.exp(numericalPreferenceList) ))    # e^h(s, a, theta)/ Sum over b(e^h(s, b, theta))
+    # e^h(s, a, theta)/ Sum over b(e^h(s, b, theta))
+    return (np.exp(numericalPreference) / np.sum(np.exp(numericalPreferenceList)))
+
 
 ''' Returns the value for a given state which acts as a critic in this algorithm '''
-def getValueFunction(state, w):
-    if np.all(np.asarray(state) == -1):
+
+
+def getValueFunction(state: ndarray, w: ndarray) -> float:
+    """
+    Function used to get a value to update the rewards and
+    policy of each agent
+    :param state: Current state of the environment
+    :param w: Array of values used to update the policy of
+             the agents
+    :return: A value calculated through the dot product of
+             two vectors. Value is used to update rewards
+             and policy of each agent
+    """
+    if np.all(np.asarray(state) == -1):  # all snakes are dead
         return 0
 
     featureVector = np.asarray(state)
     return np.dot(w.T, featureVector)
 
+
 def getAction(snake, state, theta):
+    """
+
+    :param snake:
+    :param state:
+    :param theta:
+    :return:
+    """
     actionProbability = []
     actions = []
     for action in snake.permissible_actions():
@@ -60,7 +117,10 @@ def getAction(snake, state, theta):
         actions.append(action)
     return Action(np.random.choice(actions, p=actionProbability))
 
+
 ''' Returns the differential of the policy with respect to the policy parameter theta'''
+
+
 def getGradientForPolicy(snake, state, action, theta):
     featureVector = getFeatureVector(state, action)
     exps = np.exp(getNumericalPreferences(snake, state, theta))
