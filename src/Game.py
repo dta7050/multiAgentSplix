@@ -43,7 +43,7 @@ class Game:
             print_message += str(s) + "\n"  # adds number of snakes to message
         return print_message
 
-    def move(self, actionsList: list = []) -> int:  # also returns a bool
+    def move(self, actionsList: list = []) -> (int, bool):
         """
         Takes in a list of actions corresponding to each snake in the game.
         If a snake is dead, then its corresponding position in actionsList simply holds None.
