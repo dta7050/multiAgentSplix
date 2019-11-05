@@ -13,6 +13,7 @@ import Food
 import Constants
 
 from Action import Action
+from pygame import Surface
 
 
 pygame.init()  # Initializes all pygame modules
