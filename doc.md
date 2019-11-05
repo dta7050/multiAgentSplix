@@ -7,6 +7,7 @@
 - Snake.py
 - Point.py
 - Action.py
+- Food.py
 
 ## Files left to do
 - ActorCritic.py
@@ -16,4 +17,4 @@
 - main.py
 
 ## In progress
-- Food.py (Dom)
+- ActorCritic.py (Bobby)
