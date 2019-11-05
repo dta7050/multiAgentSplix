@@ -1,11 +1,19 @@
 # Multi-Agent Splix Documentation
 
-## Action.py
-- Classes  
-  method 1  
-  method 2
-- Functions
-- Globals
+## Files done
+- Constants.py
+- Game.py
+- GraphicsEnv.py
+- Snake.py
+- Point.py
+- Action.py
 
-## Next file (.py)
-...
+## Files left to do
+- ActorCritic.py
+- Agent.py
+- AsynchronousQ.py
+- FunctionApproximator.py
+- main.py
+
+## In progress
+- Food.py (Dom)
