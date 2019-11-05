@@ -20,7 +20,7 @@ class Point:
     ''' This method compares if an object is an instance of Point
     class '''
     @classmethod
-    def fromPoint(cls, p) -> Point:
+    def fromPoint(cls, p) -> 'Point':
         """
         Sees if argument 'p' is a Point object
         :param p: object that we are checking to see if it is a Point object
@@ -48,7 +48,7 @@ class Point:
     ''' This method takes in the head, joints and tail of a snake
     and returns all the points along the body of the snake '''
     @staticmethod
-    def returnBodyPoints(body: List[Point]) -> List[Point]:
+    def returnBodyPoints(body: List['Point']) -> List['Point']:
         """
         Constructs a list of all Points of a Snake given its body
         :param body: contains the head, joints and tail of a Snake
