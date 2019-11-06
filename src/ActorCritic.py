@@ -15,6 +15,7 @@ from Point import Point
 from Game import Game
 from Snake import Snake
 from numpy import asarray, ndarray
+from os import path
 
 """ Returns the normalised feature vector which is a combination of the state
 points and the action"""
@@ -146,8 +147,8 @@ def getGradientForPolicy(snake: Snake, state: ndarray, action: Action, theta: nd
 train according to the algorithm. It also saves the checkpoints while training '''
 
 
-def train(maxTimeSteps: int, checkpointFrequency: int = 500, checkpoint_dir="checkpoints",
-          load=False, load_dir="checkpoints", load_time_step=500):
+def train(maxTimeSteps: int, checkpointFrequency: int = 500, checkpoint_dir: path = "checkpoints",
+          load: bool = False, load_dir: path = "checkpoints", load_time_step: int= 500):
     """
     Trains the snakes for a given amount of time. Initializes the training parameters, w and theta,
     to zero, and updates them after every action taken by the snakes
@@ -225,45 +226,63 @@ def train(maxTimeSteps: int, checkpointFrequency: int = 500, checkpoint_dir="che
     np.save("{}/w_{}.npy".format(checkpoint_dir, timeSteps), w)
 
 
-def inference(load_dir="checkpoints", load_time_step=500):
-    w = np.load("{}/w_{}.npy".format(load_dir, load_time_step))
+def inference(load_dir: path = "checkpoints", load_time_step: int = 500):
+    """
+    Function to simulate a game using pre-trained agents
+    :param load_dir: The directory to load the training data from
+    :param load_time_step: The timestep to start the episode from
+    :return: null
+    """
+    w = np.load("{}/w_{}.npy".format(load_dir, load_time_step))  # load previously trained agents
     theta = np.load("{}/theta_{}.npy".format(load_dir, load_time_step))
-    g = Game()
-    episodeRunning = True
+    g = Game()  # initialize the game
+    episodeRunning = True  # start the game
     while episodeRunning:
-        actionList = []
+        actionList = []  # empty list to store actions of each snake
         for i, snake in enumerate(g.snakes):
             if not snake.alive:
                 actionList.append(None)
                 stateList.append([-1] * getStateLength())
                 continue
-            opponentSnakes = [opponent for opponent in g.snakes if opponent != snake]
-            state = getState(snake, opponentSnakes, g.food, normalize=True)
-            action = getAction(snake, state, theta[i])
-            actionList.append(action)
+            opponentSnakes = [opponent for opponent in g.snakes if opponent != snake]  # gets the opponent snakes
+            state = getState(snake, opponentSnakes, g.food, normalize=True)  # gets the current state
+            action = getAction(snake, state, theta[i])  # compute the snake's action
+            actionList.append(action)  # adds the action to the list
 
-        singleStepRewards, episodeRunning = g.move(actionList)
+        singleStepRewards, episodeRunning = g.move(actionList)  # perform the action
         print(g)
 
+
 ''' This method runs the game on a graphical user interface once the agent has been trained'''
+
+
 def graphical_inference(load_dir="checkpoints", load_time_step=500, play=False, scalingFactor=9):
+    """
+    Function to load trained agents and display the game in a GUI
+    :param load_dir: Path of the training data to load
+    :param load_time_step: Which training time step to load
+    :param play: Whether or not the user is the play the game
+    :param scalingFactor: Scales the size of the window
+    :return: null
+    """
     import pygame
     import GraphicsEnv
 
     numSnakes = Constants.numberOfSnakes
     if play:
-        numSnakes += 1
-    colors = np.random.randint(0, 256, size=[numSnakes, 3])
-    if play: # user interacts with the agents
-        colors[0] = (0, 0, 0) # player's snake is always black
-    win = pygame.display.set_mode((scalingFactor * Constants.gridSize, scalingFactor * Constants.gridSize))  # Game Window
+        numSnakes += 1  # if the user is playing, add one snake to the game
+    colors = np.random.randint(0, 256, size=[numSnakes, 3])  # creates random colors
+    if play:  # user interacts with the agents
+        colors[0] = (0, 0, 0)  # player's snake is always black
+    win = pygame.display.set_mode((scalingFactor * Constants.gridSize,
+                                   scalingFactor * Constants.gridSize))  # Game Window
     screen = pygame.Surface((Constants.gridSize+1, Constants.gridSize+1))  # Grid Screen
     pygame.display.set_caption("Snake Game")
     crashed = False
 
-    w = np.load("{}/w_{}.npy".format(load_dir, load_time_step))
+    w = np.load("{}/w_{}.npy".format(load_dir, load_time_step))  # load the agents
     theta = np.load("{}/theta_{}.npy".format(load_dir, load_time_step))
-    g = Game(numSnakes)
+    g = Game(numSnakes)  # initialize the game
     episodeRunning = True
 
     while episodeRunning and not crashed:
@@ -273,19 +292,20 @@ def graphical_inference(load_dir="checkpoints", load_time_step=500, play=False, 
 
         actionList = []
         if play:
-            actionList.append( GraphicsEnv.manual_action(g.snakes[0], event) )
+            actionList.append(GraphicsEnv.manual_action(g.snakes[0], event))
         for i in range(int(play), numSnakes):
             snake = g.snakes[i]
             if not snake.alive:
                 actionList.append(None)
                 continue
-            opponentSnakes = [opponent for opponent in g.snakes if opponent != snake]
-            state = getState(snake, opponentSnakes, g.food, normalize=True)
-            action = getAction(snake, state, theta[i - int(play) ])
-            actionList.append(action)
+            opponentSnakes = [opponent for opponent in g.snakes if opponent != snake]  # get opponent snakes
+            state = getState(snake, opponentSnakes, g.food, normalize=True)  # get the current snake
+            action = getAction(snake, state, theta[i - int(play)])  # compute the next action
+            actionList.append(action)  # add the action to the list
 
-        singleStepRewards, episodeRunning = g.move(actionList)
-        GraphicsEnv.displayGame(g, win, screen, colors)
+        singleStepRewards, episodeRunning = g.move(actionList)  # perform the action, compute rewards
+        GraphicsEnv.displayGame(g, win, screen, colors)  # display the game
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     graphical_inference(30, False, False, 3, load_dir="old_checkpoints", load_time_step=10000, play=False)
