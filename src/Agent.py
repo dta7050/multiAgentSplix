@@ -41,56 +41,107 @@ import Constants
 from Snake import Snake
 from Point import Point
 from Action import Action
+from Food import Food
 
 
 ''' Given two points, this method calculates the distance between them '''
-def calculateDistance(p1, p2):
+
+
+def calculateDistance(p1: Point, p2: Point) -> float:
+    """
+    Calculates the distance between two points
+    :param p1: x and y coordinates of first point
+    :param p2: x and y coordinates of second point
+    :return: The distance between the two points
+    """
     return sqrt((p1.x - p2.x)**2 + (p1.y - p2.y)**2)
+
 
 '''This method computes the 'k' nearest food points
 to the head of the snake '''
-def findKNearestPoints(head, food):
+
+
+def findKNearestPoints(head: Point, food: Food):
+    """
+    Find the location of the closest food points
+    :param head: Point corresponding to the head of the snake
+    :param food: Variable storing information about food in the game
+    :return: List of the closest food points
+    """
     dist = []
     nearestPoints = []
-    k = Constants.numNearestFoodPointsForState
+    k = Constants.numNearestFoodPointsForState  # the number of food points to keep track of
 
     for f in food.foodList:
-        dist.append(calculateDistance(f, head))
+        dist.append(calculateDistance(f, head))  # calculates the distance between the food and snake head
 
     if len(food.foodList) < k:
-        k = len(food.foodList)
+        k = len(food.foodList)  # adjusts constant, k, if number of total food points is less than k
 
-    argmin = np.argpartition(dist, k)
+    argmin = np.argpartition(dist, k)  # sorts arguments of dist from smallest to largest
 
     for i in range(k):
-        nearestPoints.append(food.foodList[argmin[i]])
+        nearestPoints.append(food.foodList[argmin[i]])  # adds the closest food points to the list
 
     return nearestPoints
 
+
 ''' This method returns the direction of motion of the snake, given the
 snake object '''
-def findSnakeDirection(snake):
-    if snake.joints == []:
+
+
+def findSnakeDirection(snake: Snake) -> int:
+    """
+    Finds the direction that the snake is moving
+    :param snake: The snake in question
+    :return: The direction that the snake is moving
+    """
+    """
+    Joint  ->  ------------ <- Head
+              |
+    ----------|  <- Joint
+    """
+    if snake.joints == []:  # if the snake has a joint, use that to determine direction
         direction = snake.findDirection(snake.head, snake.end)
     else:
         direction = snake.findDirection(snake.head, snake.joints[0])
 
     return direction
 
+
 ''' This method is used in case of relative state representation. That is
 when the points are represented relative to the head of a snake. This
 method returns the relative position of one point with respect to the other '''
-def relativePoints(head, point):
-    return Point( point.x - head.x, point.y - head.y )
+
+
+def relativePoints(head: Point, point: Point) -> Point:
+    """
+    Takes a point in the environment and returns
+    it's coordinates relative to the snake's head
+    :param head: The head of the snake in question
+    :param point: The point to be converted
+    :return: The coordinates of the point relative
+             to the snake's head
+    """
+    return Point(point.x - head.x, point.y - head.y)
+
 
 ''' Given a set of points, this method returns the point that is closest to
 the snake's head. In case of the presence of multiple nearest points, it
 returns a point in the direction of the snake's movement '''
-def calculateMinDistPoint(snake, points):
+
+
+def calculateMinDistPoint(snake: Snake, points: list[Point]) -> Point:
+    """
+    Returns the point closest to the snake's head given a group of points
+    :param snake: The snake in question
+    :param points: The list of points to be analyzed
+    :return: The point closest to the snake's head
+    """
     dist = []
     for point in points:
-        dist.append(calculateDistance(point, snake.head))
-    dist = np.asarray(dist)
+        dist.append(calculateDistance(point, snake.head))  # calculates the distance between each point and the snake
+    dist = np.asarray(dist)  # makes the list into a numpy array
 
     minIndices = np.where(dist == dist.min())
     if minIndices[0].shape[0] == 1:
