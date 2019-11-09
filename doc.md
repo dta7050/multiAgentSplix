@@ -3,6 +3,7 @@
 ## Files done
 - Action.py
 - ActorCritic.py
+- Agent.py
 - Constants.py
 - Food.py
 - Game.py
@@ -11,9 +12,9 @@
 - Snake.py
 
 ## Files left to do
-- AsynchronousQ.py
-- FunctionApproximator.py
-- main.py
+- None
 
 ## In progress
-- Agent.py (Bobby)
+- AsynchronousQ.py (Dom)
+- FunctionApproximator.py (Dom)
+- main.py (Bobby)

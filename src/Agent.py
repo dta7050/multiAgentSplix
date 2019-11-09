@@ -42,6 +42,7 @@ from Snake import Snake
 from Point import Point
 from Action import Action
 from Food import Food
+from numpy import ndarray
 
 
 ''' Given two points, this method calculates the distance between them '''
@@ -143,12 +144,12 @@ def calculateMinDistPoint(snake: Snake, points: list[Point]) -> Point:
         dist.append(calculateDistance(point, snake.head))  # calculates the distance between each point and the snake
     dist = np.asarray(dist)  # makes the list into a numpy array
 
-    minIndices = np.where(dist == dist.min())
-    if minIndices[0].shape[0] == 1:
-        return points[minIndices[0][0]]
-    else:
-        direction = findSnakeDirection(snake)
-        for index in range(len(minIndices[0])):
+    minIndices = np.where(dist == dist.min())  # stores all closest points in an array
+    if minIndices[0].shape[0] == 1:  # if there is only one closest point
+        return points[minIndices[0][0]]  # return that point
+    else:  # if there are multiple closest points
+        direction = findSnakeDirection(snake)  # find the direction of the snake
+        for index in range(len(minIndices[0])):  # check to see if any point is in the same direction as snake
             if direction == Action.TOP:
                 if(points[minIndices[0][index]].x == snake.head.x and points[minIndices[0][index]].y >= snake.head.y):
                     return points[minIndices[0][index]]
@@ -162,69 +163,130 @@ def calculateMinDistPoint(snake: Snake, points: list[Point]) -> Point:
                 if(points[minIndices[0][index]].y == snake.head.y and points[minIndices[0][index]].x <= snake.head.x):
                     return points[minIndices[0][index]]
 
-        return points[minIndices[0][0]]
+        return points[minIndices[0][0]]  # if not, return the first closest point
+
 
 ''' This method returns the nearest wall point to the snake's head. This
 is used in the case of relative representation of points in the state space '''
-def findNearestWall(snake):   # checks the perpendicular distance from the
-    points = []                             # snake's head to all the walls and returns
-    points.append(Point(0, snake.head.y))         # minimum of those
-    points.append(Point(snake.head.x, 0))
-    points.append(Point(Constants.gridSize, snake.head.y))
-    points.append(Point(snake.head.x, Constants.gridSize))
 
-    minDistPoint = calculateMinDistPoint(snake, points)
-    return minDistPoint
+
+def findNearestWall(snake: Snake) -> Point:   # checks the perpendicular distance from the
+    """
+    Finds the outer most points in each direction (up, down, left, right)
+    starting from the snake's head and determines which of these is the
+    closest
+    :param snake: The snake in question
+    :return: The location of the closest wall point
+    """
+    points = []  # empty list to store points
+    points.append(Point(0, snake.head.y))  # adds wall point directly to the left of snake's head
+    points.append(Point(snake.head.x, 0))  # adds wall point directly below snake's head
+    points.append(Point(Constants.gridSize, snake.head.y))  # adds wall point directly to the right of snake's head
+    points.append(Point(snake.head.x, Constants.gridSize))  # adds wall point directly above snake's head
+
+    minDistPoint = calculateMinDistPoint(snake, points)  # finds the minimum distance of the points above
+    return minDistPoint  # returns the closest point
+
 
 ''' This method returns the nearest body point of the other snakes to the
 snake's head. '''
-def findOtherSnakeNearestPoint(snake1, snake2): # snake2's nearest body point to the head of snake1
-    body = [snake2.head]
+
+
+def findOtherSnakeNearestPoint(snake1: Snake, snake2: Snake) -> Point:  # snake2's nearest body point to the head of snake1
+    """
+    Takes in two snakes and computes the point on the second
+    snake that is closest to the first snake's head(?) (doesn't
+    explicitly say head)
+    :param snake1: The snake that wants to know how close the other snake is
+    :param snake2: The snake that the first snake would like to know its distance to
+    :return: The closest point on  the second snake to the first snake
+    """
+    body = [snake2.head]  # creates a representation of the second snake's body
     body.extend(snake2.joints)
     body.append(snake2.end)
-    points = Point.returnBodyPoints(body)
+    points = Point.returnBodyPoints(body)  # converts the body into a set of points
 
-    minDistPoint = calculateMinDistPoint(snake1, points)
-    return minDistPoint
+    minDistPoint = calculateMinDistPoint(snake1, points)  # finds the point on the second snake is closest to the first
+    return minDistPoint  # returns that point
+
 
 ''' Returns absolute state representation for a single snake game '''
-def getAbsoluteStateForSingleAgent(snake, food):
+
+
+def getAbsoluteStateForSingleAgent(snake: Snake, food: Food) -> list[Point, int]:
+    """
+    Gets the state of the environment for just one agent snake. State contains
+    the point of the snake's head, the nearest points of food, and the snake's
+    direction of motion. The "Absolute" state refers to the points in the state
+    contain absolute coordinates as opposed to coordinates relative to the snake's
+    head
+    :param snake: The single snake agent
+    :param food: The food points in the environment
+    :return: The state of the environment
+    """
     state = []
-    state.append(snake.head)    # head
+    state.append(snake.head)  # adds snake's head to the list
 
     if(len(food.foodList)):          # k nearest points
-        state.extend(findKNearestPoints(snake.head, food))
+        state.extend(findKNearestPoints(snake.head, food))  # adds the nearest food points to the list
 
-    state.append(findSnakeDirection(snake))   # direction
+    state.append(findSnakeDirection(snake))   # adds the direction of motion to the list
 
     return state
+
 
 ''' Returns relative state representation for a single snake game '''
-def getRelativeStateForSingleAgent(snake, food):
-    state = []
+
+
+def getRelativeStateForSingleAgent(snake, food) -> list[Point, int]:
+    """
+    Gets the state of the environment for just one agent snake. State contains
+    the nearest points of food, and the snake's direction of motion, and the
+    point of the nearest wall. The "Relative" state refers to the points in the
+    state contain coordinates relative to the snake's head as opposed to their
+    absolute locations in the environment
+    :param snake: The single snake agent
+    :param food: The points of food in the environment
+    :return: The state of the environment
+    """
+    state = []  # empty list for the state features
 
     if(len(food.foodList)):          # k nearest points
-        relativeFoodPoints = []
-        absoluteFoodPoints = findKNearestPoints(snake.head, food)
+        relativeFoodPoints = []  # empty list for relative points of each point of food
+        absoluteFoodPoints = findKNearestPoints(snake.head, food)  # finds the nearest points of food
         for point in absoluteFoodPoints:
-            relativeFoodPoints.append(relativePoints(snake.head, point))
-        state.extend(relativeFoodPoints)
+            relativeFoodPoints.append(relativePoints(snake.head, point))  # converts to relative points
+        state.extend(relativeFoodPoints)  # adds points to list
 
-    state.append(findSnakeDirection(snake))   # direction
+    state.append(findSnakeDirection(snake))   # adds direction of snake to the list
 
-    state.append(relativePoints(snake.head,findNearestWall(snake)))  # nearest wall point
+    state.append(relativePoints(snake.head, findNearestWall(snake)))  # adds nearest wall point to the list
 
     return state
 
+
 ''' Returns absolute state representation for a multi snake game '''
-def getAbsoluteStateForMultipleAgents(snake, agentList, food):
+
+
+def getAbsoluteStateForMultipleAgents(snake: Snake, agentList: list[Snake], food: Food) -> list[Point, int]:
+    """
+    Gets the state of the environment for one snake in a game containing multiple
+    agents. State contains the point of the snake's head, the nearest points of
+    food, and the snake's direction of motion. The "Absolute" state refers to the
+    points in the state contain absolute coordinates as opposed to coordinates
+    relative to the snake's head
+    :param snake: The agent for which the state of the environment is found
+    :param agentList: A list of all the other agents in the environment
+    :param food: All of the points of food in the environment
+    :return: The state of the environment from the point of view of the current snake
+    """
     state = []
-    state.append(snake.head)    # head
+    state.append(snake.head)  # adds the head of the current snake to the list
 
-    if(len(food.foodList)):          # k nearest points
-        state.extend(findKNearestPoints(snake.head, food))
+    if(len(food.foodList)):
+        state.extend(findKNearestPoints(snake.head, food))  # adds the food points to the list
 
-    state.append(findSnakeDirection(snake))   # direction
+    state.append(findSnakeDirection(snake))   # adds the snake's direction of motion to the list
 
     for agent in agentList:
         if agent.alive == True:
@@ -233,22 +295,36 @@ def getAbsoluteStateForMultipleAgents(snake, agentList, food):
             state.append(findSnakeDirection(agent))   # direction of the other agent
             state.append(findOtherSnakeNearestPoint(agent, snake))  # nearest body point of the snake to the other agent's head
         else:
-            state.extend([Point(-1, -1), Point(-1, -1), -1, Point(-1, -1)])
+            state.extend([Point(-1, -1), Point(-1, -1), -1, Point(-1, -1)])  # negative points indicates dead snake
 
     return state
 
+
 ''' Returns relative state representation for a multi snake game '''
-def getRelativeStateForMultipleAgents(snake, agentList, food):
+
+
+def getRelativeStateForMultipleAgents(snake: Snake, agentList: list[Snake], food: Food) -> list[Point, int]:
+    """
+    Gets the state of the environment for one snake in a game containing multiple
+    snakes. State contains the nearest points of food, and the snake's direction
+    of motion, and the point of the nearest wall. The "Relative" state refers to
+    the points in the state contain coordinates relative to the snake's head as
+    opposed to their absolute locations in the environment
+    :param snake: The agent for which the state of the environment is found
+    :param agentList: A list of all the other agents in the environment
+    :param food: All of the points of food in the environment
+    :return: The state of the environment from the point of view of the current snake
+    """
     state = []
 
-    if(len(food.foodList)):          # k nearest points
+    if(len(food.foodList)):  # finds the nearest food points
         relativeFoodPoints = []
         absoluteFoodPoints = findKNearestPoints(snake.head, food)
         for point in absoluteFoodPoints:
-            relativeFoodPoints.append(relativePoints(snake.head, point))
-        state.extend(relativeFoodPoints)
+            relativeFoodPoints.append(relativePoints(snake.head, point))  # converts location to relative coordinates
+        state.extend(relativeFoodPoints)  # add points to the list
 
-    state.append(findSnakeDirection(snake))   # direction
+    state.append(findSnakeDirection(snake))  # adds direction of snake to the list
 
     for agent in agentList:
         if agent.alive == True:
@@ -257,27 +333,48 @@ def getRelativeStateForMultipleAgents(snake, agentList, food):
             state.append(findSnakeDirection(agent))   # direction of the other agent
             state.append(relativePoints(snake.head,findOtherSnakeNearestPoint(agent, snake)))  # nearest body point of the snake to the other agent's head
         else:
-            state.extend([Point(-1, -1), Point(-1, -1), -1, Point(-1, -1)])
+            state.extend([Point(-1, -1), Point(-1, -1), -1, Point(-1, -1)])  # negative points indicates dead snake
 
-    state.append(relativePoints(snake.head,findNearestWall(snake)))  # nearest wall point
+    state.append(relativePoints(snake.head,findNearestWall(snake)))  # adds nearest wall point to the list
 
     return state
 
+
 ''' Returns the length of the state according to if the game is single or
 multiple snake game '''
-def getStateLength():
+
+
+def getStateLength() -> int:
+    """
+    Returns the number of features in the current state
+    :return: the number of features in the current state
+    """
     if Constants.existsMultipleAgents == False:
         return 9
     elif Constants.existsMultipleAgents == True:
         return 3 + (Constants.numNearestFoodPointsForState*2) + (Constants.numberOfSnakes-1)*7
 
+
 ''' This method is called with the arguments that specify if its a
 multiagent setting, if relative or absolute state space has to be used,
 if normalisation has to be applied, along with the other arguments'''
-def getState(snake, agentList, food, normalize=False):
+
+
+def getState(snake: Snake, agentList: list[Snake], food: Food, normalize: bool = False) -> ndarray:
+    """
+    Gets the state for the snake in question and if the normalize parameter is True,
+    the points and the actions in the state are normalized to be between zero and one
+    :param snake: The agent for which the state of the environment is found
+    :param agentList: List containing the other agent snakes
+    :param food: The food in the environment
+    :param normalize: Whether or not the state parameters should be normalized
+    :return: The state as an ndarray
+    """
     state = []
-    if snake.alive == False:
+
+    if snake.alive == False:  # checks if the snake is alive
         return [-1] * getStateLength()
+    # checks for multiple agents and whether or not the relative state is to be used
     if Constants.useRelativeState == False and Constants.existsMultipleAgents == False:
         state.extend(getAbsoluteStateForSingleAgent(snake, food))
     elif Constants.useRelativeState == False and Constants.existsMultipleAgents == True:
@@ -288,11 +385,11 @@ def getState(snake, agentList, food, normalize=False):
         state.extend(getRelativeStateForMultipleAgents(snake, agentList, food))
 
     flatState = []
-    for entry in state:
+    for entry in state:  # normalize the data if desired
         if isinstance(entry, Point):
             if normalize:
-                flatState.append( entry.x * 1.0 / Constants.gridSize )
-                flatState.append( entry.y * 1.0 / Constants.gridSize )
+                flatState.append(entry.x * 1.0 / Constants.gridSize)
+                flatState.append(entry.y * 1.0 / Constants.gridSize)
             else:
                 flatState.append(entry.x)
                 flatState.append(entry.y)
