@@ -17,6 +17,8 @@ from Snake import Snake
 from numpy import asarray, ndarray
 from os import path
 
+from typing import List
+
 """ Returns the normalised feature vector which is a combination of the state
 points and the action"""
 
@@ -42,7 +44,7 @@ def getFeatureVector(state: ndarray, action: Action) -> ndarray:
 Numerical preferences is a linear function approximation in theta parameter '''
 
 
-def getNumericalPreferences(snake: Snake, state: ndarray, theta: ndarray) -> list[ndarray]:
+def getNumericalPreferences(snake: Snake, state: ndarray, theta: ndarray) -> List[ndarray]:
     """
     This function computes a feature vector and then uses a vector of theta values and uses them to
     compute of vector of numerical preferences that correspond to how good each feature value is

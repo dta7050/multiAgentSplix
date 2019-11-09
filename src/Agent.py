@@ -44,6 +44,7 @@ from Action import Action
 from Food import Food
 from numpy import ndarray
 
+from typing import List
 
 ''' Given two points, this method calculates the distance between them '''
 
@@ -132,7 +133,7 @@ the snake's head. In case of the presence of multiple nearest points, it
 returns a point in the direction of the snake's movement '''
 
 
-def calculateMinDistPoint(snake: Snake, points: list[Point]) -> Point:
+def calculateMinDistPoint(snake: Snake, points: List[Point]) -> Point:
     """
     Returns the point closest to the snake's head given a group of points
     :param snake: The snake in question
@@ -213,7 +214,7 @@ def findOtherSnakeNearestPoint(snake1: Snake, snake2: Snake) -> Point:  # snake2
 ''' Returns absolute state representation for a single snake game '''
 
 
-def getAbsoluteStateForSingleAgent(snake: Snake, food: Food) -> list[Point, int]:
+def getAbsoluteStateForSingleAgent(snake: Snake, food: Food):
     """
     Gets the state of the environment for just one agent snake. State contains
     the point of the snake's head, the nearest points of food, and the snake's
@@ -238,7 +239,7 @@ def getAbsoluteStateForSingleAgent(snake: Snake, food: Food) -> list[Point, int]
 ''' Returns relative state representation for a single snake game '''
 
 
-def getRelativeStateForSingleAgent(snake, food) -> list[Point, int]:
+def getRelativeStateForSingleAgent(snake: Snake, food: Food):
     """
     Gets the state of the environment for just one agent snake. State contains
     the nearest points of food, and the snake's direction of motion, and the
@@ -268,7 +269,7 @@ def getRelativeStateForSingleAgent(snake, food) -> list[Point, int]:
 ''' Returns absolute state representation for a multi snake game '''
 
 
-def getAbsoluteStateForMultipleAgents(snake: Snake, agentList: list[Snake], food: Food) -> list[Point, int]:
+def getAbsoluteStateForMultipleAgents(snake: Snake, agentList: List[Snake], food: Food):
     """
     Gets the state of the environment for one snake in a game containing multiple
     agents. State contains the point of the snake's head, the nearest points of
@@ -303,7 +304,7 @@ def getAbsoluteStateForMultipleAgents(snake: Snake, agentList: list[Snake], food
 ''' Returns relative state representation for a multi snake game '''
 
 
-def getRelativeStateForMultipleAgents(snake: Snake, agentList: list[Snake], food: Food) -> list[Point, int]:
+def getRelativeStateForMultipleAgents(snake: Snake, agentList: List[Snake], food: Food):
     """
     Gets the state of the environment for one snake in a game containing multiple
     snakes. State contains the nearest points of food, and the snake's direction
@@ -360,7 +361,7 @@ multiagent setting, if relative or absolute state space has to be used,
 if normalisation has to be applied, along with the other arguments'''
 
 
-def getState(snake: Snake, agentList: list[Snake], food: Food, normalize: bool = False) -> ndarray:
+def getState(snake: Snake, agentList: List[Snake], food: Food, normalize: bool = False) -> ndarray:
     """
     Gets the state for the snake in question and if the normalize parameter is True,
     the points and the actions in the state are normalized to be between zero and one

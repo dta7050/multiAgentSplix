@@ -9,12 +9,12 @@ from numpy.random import randint
 from typing import List
 
 from Point import Point
-from Snake import Snake
+import Snake
 
 
 class Food:
 
-    def __init__(self, snakes: List[Snake] = []):
+    def __init__(self, snakes: List['Snake.Snake'] = []):
         """
         Initializes the Food object
         :param snakes: list of Snake objects
@@ -22,7 +22,7 @@ class Food:
         self.foodList = []  # type: List[Point]  # Contains all points that are food in the game
         self.createFood(Constants.maximumFood, snakes)
 
-    def createFood(self, n: int, snakes: List[Snake] = []) -> None:
+    def createFood(self, n: int, snakes: List['Snake.Snake'] = []) -> None:
         """
         This method spawns specified number of food points in the grid at random positions.
         It also ensures that the food points created are not overlapping
@@ -58,7 +58,7 @@ class Food:
         for p in pointList:
             self.foodList.append(p)
 
-    def eatFood(self, food_point: Point, snakes: List[Snake] = []) -> None:
+    def eatFood(self, food_point: Point, snakes: List['Snake.Snake'] = []) -> None:
         """
         This method deletes the food from the food list once it has been eaten.
         It also maintains a minimum number of food points in the grid at an instance

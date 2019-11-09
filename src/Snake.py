@@ -12,7 +12,7 @@ from numpy.random import randint
 
 from Point import Point
 from Action import Action
-from Food import Food
+import Food
 from typing import List, Tuple
 
 
@@ -274,7 +274,7 @@ class Snake:
         return actions
 
     # TODO: WILL NEED TO CHANGE IF WE DO SPLIX GAME
-    def killSnake(self, food: Food) -> None:
+    def killSnake(self, food: 'Food.Food') -> None:
         """
         Once the snake is dead, this method sets the alive bit of the snake to false,
         converts the body points into food points and deletes the snake's head, joints and tail

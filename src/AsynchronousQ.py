@@ -19,33 +19,70 @@ import Constants
 from threading import Lock, Thread, get_ident
 from queue import Queue
 from multiprocessing import cpu_count
+from typing import List
 
 from Action import Action
+from Snake import Snake
+from FunctionApproximator import NeuralNetwork
 
-def epsilon_greedy_action(snake, sess, nn, state, epsilon):
-        state = [state]
-        possible_actions = snake.permissible_actions()
-        best_action, _ = nn.max_permissible_Q(sess, state, possible_actions)
-        best_action = Action(best_action)
-        # possible_actions.remove(best_action)
-        prob = random.uniform(0, 1)
-        if prob <= epsilon:
-            return best_action
-        else:
-            return random.choice(possible_actions)
-        #choose action according to epsilon-greedy
-        #return the action to be chosen
 
-def best_q(snake, sess, nn, state):
+def epsilon_greedy_action(snake: Snake, sess: tf.Session, nn: NeuralNetwork, state: np.ndarray, epsilon: List[float]):
+    """
+
+    :param snake:
+    :param sess:
+    :param nn:
+    :param state:
+    :param epsilon:
+    :return:
+    """
+    state = [state]  # List[np.ndarray]
+    possible_actions = snake.permissible_actions()  # type: List[Action]
+    best_action, _ = nn.max_permissible_Q(sess, state, possible_actions)
+    best_action = Action(best_action)
+    # possible_actions.remove(best_action)
+    prob = random.uniform(0, 1)
+    # choose action according to epsilon-greedy
+    # return the action to be chosen
+    if prob <= epsilon:
+        return best_action
+    else:
+        return random.choice(possible_actions)
+
+
+def best_q(snake: Snake, sess, nn, state):
+    """
+
+    :param snake:
+    :param sess:
+    :param nn:
+    :param state:
+    :return:
+    """
     # state = [state]
     return nn.max_permissible_Q(sess, state, snake.permissible_actions())[1]
 
-def async_Q(max_time_steps, reward, penalty,
-                                checkpointFrequency, checkpoint_dir,
-                                policyNetwork, policySess, targetNetwork, targetSess,
-                                lock, queue):
+
+def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency: int, checkpoint_dir: str,
+            policyNetwork: List[NeuralNetwork], policySess: List[tf.Session], targetNetwork: List[NeuralNetwork],
+            targetSess: List[tf.Session], lock: Lock, queue: Queue):
+    """
+
+    :param max_time_steps:
+    :param reward:
+    :param penalty:
+    :param checkpointFrequency:
+    :param checkpoint_dir:
+    :param policyNetwork:
+    :param policySess:
+    :param targetNetwork:
+    :param targetSess:
+    :param lock:
+    :param queue:
+    :return:
+    """
     time_steps = 0
-    epsilon = []
+    epsilon = []  # type: List[float]
     for idx in range(Constants.numberOfSnakes):
         while True:
             e = np.random.normal(0.8, 0.1)
@@ -149,13 +186,28 @@ def async_Q(max_time_steps, reward, penalty,
         targetNetwork[idx].save_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(checkpoint_dir, T+1, idx))
 
 
-def train(max_time_steps=1000, reward=1, penalty=-10,
-                                        size_of_hidden_layer=20, num_threads=4,
-                                        checkpointFrequency=500, checkpoint_dir="checkpoints", load=False, load_dir="checkpoints", load_time_step=500):
-    policyNetwork = []
-    targetNetwork = []
-    policySess = []
-    targetSess = []
+def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
+          size_of_hidden_layer: int = 20, num_threads: int = 4, checkpointFrequency: int = 500,
+          checkpoint_dir: str = "checkpoints", load: bool = False, load_dir: str = "checkpoints",
+          load_time_step: int = 500):
+    """
+
+    :param max_time_steps:
+    :param reward:
+    :param penalty:
+    :param size_of_hidden_layer:
+    :param num_threads:
+    :param checkpointFrequency:
+    :param checkpoint_dir:
+    :param load:
+    :param load_dir:
+    :param load_time_step:
+    :return:
+    """
+    policyNetwork = []  # type: List[NeuralNetwork]
+    targetNetwork = []  # type: List[NeuralNetwork]
+    policySess = []     # type: List[tf.Session]
+    targetSess = []     # type: List[tf.Session]
 
     if os.path.isdir(checkpoint_dir):
         # if directory exists, delete it and its contents
@@ -178,7 +230,7 @@ def train(max_time_steps=1000, reward=1, penalty=-10,
         policyNetwork[idx].save_model(policySess[idx], checkpoint_path)
         targetNetwork[idx].restore_model(targetSess[idx], checkpoint_path)
 
-    if load: # resume training from old checkpoints
+    if load:  # resume training from old checkpoints
         for idx in range(Constants.numberOfSnakes):
             policyNetwork[idx].restore_model(policySess[idx], "{}/policy_{}_{}.ckpt".format(load_dir, load_time_step, idx))
             targetNetwork[idx].restore_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(load_dir, load_time_step, idx))
@@ -187,35 +239,44 @@ def train(max_time_steps=1000, reward=1, penalty=-10,
     q = Queue()
     q.put(T)
     lock = Lock()
-    threads = [Thread(target=async_Q, args=(max_time_steps, reward, penalty,
-                                                                        checkpointFrequency, checkpoint_dir,
-                                                                        policyNetwork, policySess, targetNetwork, targetSess,
-                                                                        lock, q)) for _ in range(num_threads)]
-    #map(lambda t: t.start(), threads)
+    threads = [Thread(target=async_Q, args=(max_time_steps, reward, penalty, checkpointFrequency, checkpoint_dir,
+                                            policyNetwork, policySess, targetNetwork, targetSess, lock, q)) for _ in range(num_threads)]
+    # map(lambda t: t.start(), threads)
     for t in threads:
         t.start()
 
     print(threads)
     print("main complete")
 
-"""To render graphics of the trained agents"""
-def graphical_inference(size_of_hidden_layer=20, load_dir="checkpoints", load_time_step=500, play=False, scalingFactor=9):
+
+def graphical_inference(size_of_hidden_layer: int = 20, load_dir: str = "checkpoints", load_time_step: int = 500,
+                        play: bool = False, scalingFactor: int = 9):
+    """
+    To render graphics of the trained agents
+    :param size_of_hidden_layer:
+    :param load_dir:
+    :param load_time_step:
+    :param play:
+    :param scalingFactor:
+    :return:
+    """
     import pygame
     import GraphicsEnv
 
-    numSnakes = Constants.numberOfSnakes
+    numSnakes = Constants.numberOfSnakes  # type: int
     if play:
         numSnakes += 1
     colors = np.random.randint(0, 256, size=[numSnakes, 3])
-    if play: # user interacts with the agents
-        colors[0] = (0, 0, 0) # player's snake is always black
-    win = pygame.display.set_mode((scalingFactor * Constants.gridSize, scalingFactor * Constants.gridSize))  # Game Window
+    if play:  # user interacts with the agents
+        colors[0] = (0, 0, 0)  # player's snake is always black
+    # Create Game Window
+    win = pygame.display.set_mode((scalingFactor * Constants.gridSize, scalingFactor * Constants.gridSize))
     screen = pygame.Surface((Constants.gridSize+1, Constants.gridSize+1))  # Grid Screen
     pygame.display.set_caption("Snake Game")
     crashed = False
 
-    targetNetwork = []
-    targetSess = []
+    targetNetwork = []  # type: List[NueralNetwork]
+    targetSess = []     # type: List[tf.Session]
     if play:
         targetNetwork.append(None)
         targetSess.append(None)

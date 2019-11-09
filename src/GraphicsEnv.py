@@ -15,8 +15,8 @@ import Point
 import Snake
 
 from Action import Action
-from pygame import Surface, Event, display
-
+from pygame import Surface, display, event
+from typing import List, Tuple
 
 pygame.init()  # Initializes all pygame modules
 
@@ -48,7 +48,7 @@ def to_pygame(p: Point) -> int:
     return (p.x, Constants.gridSize-p.y)
 
 
-def manual_action_list(g: Game, event: Event) -> list:
+def manual_action_list(g: Game, event: event) -> list:
     """
     Function to determine where to move each snake. Iterates through each snake assigning an action to each one. If the
     user is playing the game, it reads the button presses and assigns an action accordingly
@@ -90,7 +90,7 @@ def manual_action_list(g: Game, event: Event) -> list:
     return actionsList
 
 
-def manual_action(snake: Snake, event: Event) -> Action:
+def manual_action(snake: Snake, event: event) -> Action:
     """
     A function that determines the action to be taken by the player's snake based on the button presses detected
     by the event variable
@@ -123,6 +123,7 @@ def manual_action(snake: Snake, event: Event) -> Action:
 
 """This function is used to draw the body of the snake, display score, display food points
 for a manual game of snake"""
+
 
 def runRandomGame(play: bool = True, scalingFactor: int = 9):  # Scaling the size of the grid):
     """
@@ -192,7 +193,7 @@ def runRandomGame(play: bool = True, scalingFactor: int = 9):  # Scaling the siz
     pygame.quit()  # end the game
 
 
-def displayGame(game: Game, win: display, screen: Surface, colors: list[tuple], scalingFactor: int = 9):
+def displayGame(game: Game, win: display, screen: Surface, colors: List[Tuple[int, int, int]], scalingFactor: int = 9):
     """
     A function to display a game episode when the player. It takes in a window and screen/surface and
     updates the display after each frame based on the actions taken
