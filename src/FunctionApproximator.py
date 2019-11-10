@@ -74,7 +74,7 @@ class NeuralNetwork:
         layers[3] = tf.nn.softmax(layers[2], name="softmax")  # performs softmax to determine action to take
         return layers
 
-    def save_model(self, sess: tf.Session, path: path) -> path:
+    def save_model(self, sess, path):
         """
         Saves the network (weights and layers and stuff)
         :param sess: A training session to be saved
@@ -84,7 +84,7 @@ class NeuralNetwork:
         save_path = self.model["saver"].save(sess, path)
         return save_path
 
-    def restore_model(self, sess: tf.Session, path: path):
+    def restore_model(self, sess, path):
         """
         Loads a saved model
         :param sess: The training model to be loaded
@@ -94,7 +94,7 @@ class NeuralNetwork:
         self.model["saver"].restore(sess, path)
         return
 
-    def init(self, sess: tf.Session):
+    def init(self, sess):
         """
         Initializes the tensorflow global variables
         :param sess: The session to be initialized
@@ -103,7 +103,7 @@ class NeuralNetwork:
         sess.run(self.model["init"])
         return
 
-    def Q(self, sess: tf.Session, state, action: 'Action'):
+    def Q(self, sess, state, action: 'Action'):
         """
         Gets the Q value obtained from the neural network
         :param sess: The training session to run
@@ -113,7 +113,7 @@ class NeuralNetwork:
         """
         return sess.run(self.model["Q_value"], feed_dict={self.model["state"]: state, self.model["action"]: action})
 
-    def max_permissible_Q(self, sess: tf.Session, state, permissible_actions: List['Action']) -> ('Action', int):  # NOTE: implemented only for batch_size=1
+    def max_permissible_Q(self, sess, state, permissible_actions: List['Action']) -> ('Action', int):  # NOTE: implemented only for batch_size=1
         """
         Calculates the Q values associated with each possible action and returns the action
         with the highest Q along with the value of that Q
@@ -130,7 +130,7 @@ class NeuralNetwork:
         best_action = permissible_actions[best_Q_index]  # action with highest Q is the best action
         return (best_action, permissible_Q[best_Q_index])
 
-    def train(self, sess: tf.Session, state, action: 'Action', reward: int, next_state_Q: int):
+    def train(self, sess, state, action: 'Action', reward: int, next_state_Q: int):
         """
 
         :param sess: Training session to be run

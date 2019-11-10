@@ -26,7 +26,7 @@ from Snake import Snake
 from FunctionApproximator import NeuralNetwork
 
 
-def epsilon_greedy_action(snake: Snake, sess: tf.Session, nn: NeuralNetwork, state: np.ndarray, epsilon: List[float]):
+def epsilon_greedy_action(snake: Snake, sess, nn: NeuralNetwork, state, epsilon: List[float]):
     """
 
     :param snake:
@@ -64,8 +64,8 @@ def best_q(snake: Snake, sess, nn, state):
 
 
 def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency: int, checkpoint_dir: str,
-            policyNetwork: List[NeuralNetwork], policySess: List[tf.Session], targetNetwork: List[NeuralNetwork],
-            targetSess: List[tf.Session], lock: Lock, queue: Queue):
+            policyNetwork: List[NeuralNetwork], policySess, targetNetwork: List[NeuralNetwork],
+            targetSess, lock: Lock, queue: Queue):
     """
 
     :param max_time_steps:
