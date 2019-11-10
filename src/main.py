@@ -7,8 +7,17 @@ import ActorCritic
 import AsynchronousQ
 import Constants
 
+
 def main():
-    parser = argparse.ArgumentParser()
+    """
+    Calling this function runs the entire program. Depending on the arguments
+    passed to it, the agents can be either trained or simulated using either
+    an AsynchronousQ or Actor Critic algorithm. Additionally, previously
+    trained agents can be loaded to be further trained or to evaluate how they
+    perform.
+    :return:
+    """
+    parser = argparse.ArgumentParser()  # used to add arguments that can be passed to the function
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('--mode', type=str,
@@ -42,23 +51,28 @@ def main():
 
     args = parser.parse_args()
 
-    if args.mode=='train':
-        load = (args.trained_ckpt_index != -1)
+    if args.mode == 'train':  # train the agents
+        load = (args.trained_ckpt_index != -1)  # if the checkpoint given is -1 (default) loading cannot be done
         if args.algorithm == 'asyncQ':
             AsynchronousQ.train(max_time_steps=args.train_time_steps, reward=1, penalty=-10,
-                                                    size_of_hidden_layer=args.hidden_units, num_threads=args.threads,
-                                                    checkpointFrequency=args.checkpoint_frequency, checkpoint_dir=args.checkpoint_dir,
-                                                    load=load, load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index)
+                                size_of_hidden_layer=args.hidden_units, num_threads=args.threads,
+                                checkpointFrequency=args.checkpoint_frequency, checkpoint_dir=args.checkpoint_dir,
+                                load=load, load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index)
         else:
-            ActorCritic.train(args.train_time_steps, checkpointFrequency=args.checkpoint_frequency, checkpoint_dir=args.checkpoint_dir,
-                                                    load=load, load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index)
+            ActorCritic.train(args.train_time_steps, checkpointFrequency=args.checkpoint_frequency,
+                              checkpoint_dir=args.checkpoint_dir, load=load, load_dir=args.trained_dir,
+                              load_time_step=args.trained_ckpt_index)
         print("Training complete.")
     else:
-        if args.algorithm == 'asyncQ':
-            AsynchronousQ.graphical_inference(args.hidden_units, load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index, play=args.play, scalingFactor=9)
+        if args.algorithm == 'asyncQ':  # simulate a game on trained agents
+            AsynchronousQ.graphical_inference(args.hidden_units, load_dir=args.trained_dir,
+                                              load_time_step=args.trained_ckpt_index,
+                                              play=args.play, scalingFactor=9)
         else:
-            ActorCritic.graphical_inference(load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index, play=args.play, scalingFactor=9)
+            ActorCritic.graphical_inference(load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index,
+                                            play=args.play, scalingFactor=9)
         print("Inference complete.")
+
 
 if __name__ == '__main__':
     main()
