@@ -43,11 +43,14 @@ class Game:
             print_message += str(s) + "\n"  # adds number of snakes to message
         return print_message
 
-    def move(self, actionsList: list = []) -> (int, bool):
+    def move(self, actionsList: list = []) -> (List[int], bool):
         """
         Takes in a list of actions corresponding to each snake in the game.
         If a snake is dead, then its corresponding position in actionsList simply holds None.
         Returns boolean indicating whether the game has ended
+
+         The Game ends if the time step has reached the specified length of the game, or if all snakes are dead.
+
         :param actionsList: list of potential actions snake can take
         :return:
         """

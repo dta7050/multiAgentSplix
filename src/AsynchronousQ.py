@@ -26,22 +26,26 @@ from Snake import Snake
 from FunctionApproximator import NeuralNetwork
 
 
-def epsilon_greedy_action(snake: Snake, sess, nn: NeuralNetwork, state, epsilon: List[float]):
+def epsilon_greedy_action(snake: Snake, sess, nn: NeuralNetwork, state, epsilon: float):
     """
-
-    :param snake:
-    :param sess:
-    :param nn:
-    :param state:
-    :param epsilon:
+    This function determines the initial action a snake takes. A random value is compared to epsilon,
+    depending on the result, either the best action (as computed by max_permissable_Q()) or a random possible
+    action is chosen.
+    :param snake: Snake object to choose Action for
+    :param sess: Tensorflow Session object
+    :param nn: Nueral Network object for snake
+    :param state: initial state of the snake
+    :param epsilon: epsilon value to compare random number too.
     :return:
     """
     state = [state]  # List[np.ndarray]
+    # Get possible actions snake can take
     possible_actions = snake.permissible_actions()  # type: List[Action]
+    # compute the best action to take
     best_action, _ = nn.max_permissible_Q(sess, state, possible_actions)
     best_action = Action(best_action)
     # possible_actions.remove(best_action)
-    prob = random.uniform(0, 1)
+    prob = random.uniform(0, 1)  # picks a random number between 0 and 1
     # choose action according to epsilon-greedy
     # return the action to be chosen
     if prob <= epsilon:
@@ -52,18 +56,19 @@ def epsilon_greedy_action(snake: Snake, sess, nn: NeuralNetwork, state, epsilon:
 
 def best_q(snake: Snake, sess, nn, state):
     """
-
-    :param snake:
-    :param sess:
-    :param nn:
-    :param state:
+    This function simply returns the best action as computed by the max_permissible_Q function.
+    This is used to compute the best action for Snakes to make
+    :param snake: Snake object to compute best next action for
+    :param sess: Tensorflow Session object
+    :param nn: Nueral Network object of snake
+    :param state: current state of the Snake
     :return:
     """
     # state = [state]
     return nn.max_permissible_Q(sess, state, snake.permissible_actions())[1]
 
 
-def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency: int, checkpoint_dir: str,
+def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency: int, checkpoint_dir,
             policyNetwork: List[NeuralNetwork], policySess, targetNetwork: List[NeuralNetwork],
             targetSess, lock: Lock, queue: Queue):
     """
@@ -82,6 +87,7 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
     :return:
     """
     time_steps = 0
+    # Create random epsilon list
     epsilon = []  # type: List[float]
     for idx in range(Constants.numberOfSnakes):
         while True:
@@ -91,35 +97,40 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
                 break
 
     while True:
-        g = Game.Game()
+        g = Game.Game()  # creates game object
         #Start a Game
-        snake_list = g.snakes
-        episodeRunning = True
-        pastStateAlive = [True for i in range(Constants.numberOfSnakes)]
-        actions_taken = [0 for j in range(Constants.numberOfSnakes)]
+        snake_list = g.snakes  # contains list of Snake objects
+        episodeRunning = True  # True if game is running, false if not
+        pastStateAlive = [True for i in range(Constants.numberOfSnakes)]  # keeps track if Snakes were alive
+        actions_taken = [0 for j in range(Constants.numberOfSnakes)]  # holds the actions last taken for each snake
         initial_state = [0]*Constants.numberOfSnakes
 
+        # initialize lists
         state           = [ [] for _ in range(Constants.numberOfSnakes) ]
         action          = [ [] for _ in range(Constants.numberOfSnakes) ]
         reward          = [ [] for _ in range(Constants.numberOfSnakes) ]
         next_state_Q    = [ [] for _ in range(Constants.numberOfSnakes) ]
 
         while episodeRunning: #Meaning in an episode
-            for idx in range(Constants.numberOfSnakes):
+            for idx in range(Constants.numberOfSnakes):  # for each snake
+                # contains all snakes except the currently indexed one
                 pruned_snake_list = [ snake for snake in snake_list if snake != snake_list[idx] ]
                 if g.snakes[idx].alive:
+                    # Get state of snake
                     initial_state[idx] = Agent.getState(g.snakes[idx], pruned_snake_list, g.food, normalize=True)
+                    # Choose action to take using epsilon greedy action
                     actions_taken[idx] = epsilon_greedy_action(g.snakes[idx], policySess[idx], policyNetwork[idx], initial_state[idx], epsilon[idx])
-
-                    state[idx].append(initial_state[idx])
-                    action[idx].append([actions_taken[idx]])
+                    state[idx].append(initial_state[idx])  # keep track of state by appending it to list
+                    action[idx].append([actions_taken[idx]])  # keep track of action by appending it to list
                     pastStateAlive[idx] = True
                 else:
                     actions_taken[idx] = None
                     pastStateAlive[idx] = False
 
+            # Try to move all snakes according to their computed actions
             try:
-                single_step_reward, episodeRunning = g.move(actions_taken)
+                # List[int]       ,  bool
+                single_step_reward, episodeRunning = g.move(actions_taken)  # rewards for snake actions, game end state
             except AssertionError:
                 print("Error making moves {} in game :\n{}".format(actions_taken, g))
 
@@ -131,31 +142,44 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
             queue.put(T)
             lock.release()
 
+            # Every 500 time steps...
             if T % checkpointFrequency == 0:
+                # for each snake...
                 for idx in range(Constants.numberOfSnakes):
+                    # Save policy and target network checkpoints
                     policyNetwork[idx].save_model(policySess[idx], "{}/policy_{}_{}.ckpt".format(checkpoint_dir, T, idx))
                     targetNetwork[idx].save_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(checkpoint_dir, T, idx))
 
+            # for each snake...
             for idx in range(Constants.numberOfSnakes):
+                # if snake is alive, append its reward to its reward list. (Keeps track of rewards for each snake)
                 if (pastStateAlive[idx]): # To check if snake was already dead or just died
                     reward[idx].append([single_step_reward[idx]])
-
+                    # contains all snakes except the currently indexed one
                     pruned_snake_list = [ snake for snake in snake_list if snake != snake_list[idx] ]
-                    if not episodeRunning or not g.snakes[idx].alive: # train on terminal
+                    # if the game is over or snake is dead...
+                    if not episodeRunning or not g.snakes[idx].alive:  # train on terminal
                         next_state_Q[idx].append([0])
+                        # thread waits here until thread lock is available
                         lock.acquire()
+                        # Update agent policy
                         policyNetwork[idx].train(policySess[idx], state[idx], action[idx], reward[idx], next_state_Q[idx])
                         lock.release()
+                        # clear lists
                         state[idx], action[idx], reward[idx], next_state_Q[idx] = [], [], [], []
                     else:
+                        # get snake state and get next best action to take
                         final_state = Agent.getState(g.snakes[idx], pruned_snake_list, g.food, normalize=True)
                         next_state_best_Q = best_q(g.snakes[idx], targetSess[idx], targetNetwork[idx], [final_state])
                         next_state_Q[idx].append([next_state_best_Q])
 
+            # Update agent policy
             if time_steps % Constants.AQ_asyncUpdateFrequency == 0:
+                # for each snake
                 for idx in range(Constants.numberOfSnakes):
                     if pastStateAlive[idx] and g.snakes[idx].alive and episodeRunning: # train only if non-terminal, since terminal case is handled above
                         lock.acquire()
+                        # update agent policy
                         policyNetwork[idx].train(policySess[idx], state[idx], action[idx], reward[idx], next_state_Q[idx])
                         lock.release()
                     state[idx], action[idx], reward[idx], next_state_Q[idx] = [], [], [], []
@@ -178,9 +202,11 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
         print("Episode done on thread {}. T = {}.".format(get_ident(), T))
         T = queue.get()
         queue.put(T)
+        #  break out of loop when all time steps done
         if T >= max_time_steps:
             break
     print("Thread {} complete.".format(get_ident()))
+    # save policy and target models
     for idx in range(Constants.numberOfSnakes):
         policyNetwork[idx].save_model(policySess[idx], "{}/policy_{}_{}.ckpt".format(checkpoint_dir, T+1, idx))
         targetNetwork[idx].save_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(checkpoint_dir, T+1, idx))
@@ -188,7 +214,7 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
 
 def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
           size_of_hidden_layer: int = 20, num_threads: int = 4, checkpointFrequency: int = 500,
-          checkpoint_dir: str = "checkpoints", load: bool = False, load_dir: str = "checkpoints",
+          checkpoint_dir = "checkpoints", load: bool = False, load_dir = "checkpoints",
           load_time_step: int = 500):
     """
 
@@ -249,7 +275,7 @@ def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
     print("main complete")
 
 
-def graphical_inference(size_of_hidden_layer: int = 20, load_dir: str = "checkpoints", load_time_step: int = 500,
+def graphical_inference(size_of_hidden_layer: int = 20, load_dir = "checkpoints", load_time_step: int = 500,
                         play: bool = False, scalingFactor: int = 9):
     """
     To render graphics of the trained agents
