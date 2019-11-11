@@ -7,7 +7,6 @@ import numpy as np
 
 import Constants
 from typing import List
-from os import path
 
 
 class NeuralNetwork:
