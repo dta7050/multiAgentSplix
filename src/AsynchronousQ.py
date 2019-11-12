@@ -2,7 +2,7 @@
 using the threading module for multi-processing. FunctionApproximator.py is used
 to acquire the Q values and update the gradients of the target network and the
 policy network. Actions are chosen according to Epsilon-Greedy selection
-At the end, the trained snake is rendered graphically to visually check for behaviour
+At the end, the trained snake is rendered graphically to visually check for behaviour 
 """
 
 import tensorflow as tf
