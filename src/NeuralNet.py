@@ -60,7 +60,7 @@ class NeuralNetwork:
         """
         Actually creates the neural network
         :param data_length: Length of input data to the network
-        :param size_of_hidden_layer: Number of neurons in the hidden layer
+        :param size_of_hidden_layer: Number of neurons in the hawdhfidden layer
         :return: A list of the layers
         """
         layers = []  # initialize list of layers
