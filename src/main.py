@@ -5,6 +5,7 @@ import argparse
 
 import ActorCritic
 import AsynchronousQ
+import NewAlgo
 import Constants
 
 
@@ -30,7 +31,7 @@ def main():
                                 pre-trained agents.""")
     parser.add_argument('--train_time_steps', type=int, default=10000,
                         help="The number of time steps to run training for. Requires: --mode=train.")
-    parser.add_argument('--algorithm', type=str, choices=['asyncQ', 'actorcritic'], required=True,
+    parser.add_argument('--algorithm', type=str, choices=['asyncQ', 'newalgo', 'actorcritic'], required=True,
                         help="The algorithm to be used for training.")
     parser.add_argument('--checkpoint_dir', type=str, default='checkpoints',
                         help="The directory to store all checkpoints during training. Requires: --mode=train.")
@@ -58,6 +59,11 @@ def main():
                                 size_of_hidden_layer=args.hidden_units, num_threads=args.threads,
                                 checkpointFrequency=args.checkpoint_frequency, checkpoint_dir=args.checkpoint_dir,
                                 load=load, load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index)
+        elif args.algorithm == 'newalgo':
+            NewAlgo.train(max_time_steps=args.train_time_steps, reward=1, penalty=-10,
+                         size_of_hidden_layer=args.hidden_units, num_threads=args.threads,
+                         checkpointFrequency=args.checkpoint_frequency, checkpoint_dir=args.checkpoint_dir,
+                         load=load, load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index)
         else:
             ActorCritic.train(args.train_time_steps, checkpointFrequency=args.checkpoint_frequency,
                               checkpoint_dir=args.checkpoint_dir, load=load, load_dir=args.trained_dir,
@@ -68,6 +74,10 @@ def main():
             AsynchronousQ.graphical_inference(args.hidden_units, load_dir=args.trained_dir,
                                               load_time_step=args.trained_ckpt_index,
                                               play=args.play, scalingFactor=9)
+        elif args.algorithm == 'newalgo':
+            NewAlgo.graphical_inference(args.hidden_units, load_dir=args.trained_dir,
+                                        load_time_step=args.trained_ckpt_index,
+                                        play=args.play, scalingFactor=9)
         else:
             ActorCritic.graphical_inference(load_dir=args.trained_dir, load_time_step=args.trained_ckpt_index,
                                             play=args.play, scalingFactor=9)
