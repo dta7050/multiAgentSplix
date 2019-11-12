@@ -208,8 +208,10 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
     print("Thread {} complete.".format(get_ident()))
     # save policy and target models
     for idx in range(Constants.numberOfSnakes):
+        lock.acquire()
         policyNetwork[idx].save_model(policySess[idx], "{}/policy_{}_{}.ckpt".format(checkpoint_dir, T+1, idx))
         targetNetwork[idx].save_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(checkpoint_dir, T+1, idx))
+        lock.release()
 
 
 def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
