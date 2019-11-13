@@ -43,6 +43,7 @@ class NeuralNetwork:
             t1 = Constants.gamma * best_Q
             t2 = reward + t1
             difference = t2 - Q_value  # difference between expected Q and actual Q
+            #loss = tf.losses.mean_squared_error(labels=Q_value, predictions=t2)
             loss = tf.square(difference, name="loss")  # Loss function is square of difference
 
             trainable_vars = tf.trainable_variables()  # list of trainable variables
