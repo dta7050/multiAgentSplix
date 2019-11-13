@@ -15,7 +15,6 @@ import Agent
 import FunctionApproximator
 import Game
 import Constants
-import NeuralNet
 
 from threading import Lock, Thread, get_ident
 from queue import Queue
@@ -25,7 +24,6 @@ from typing import List
 from Action import Action
 from Snake import Snake
 from FunctionApproximator import NeuralNetwork
-from NeuralNet import NeuralNetwork
 
 
 def epsilon_greedy_action(snake: Snake, sess, nn: NeuralNetwork, state, epsilon: float):
@@ -71,7 +69,8 @@ def best_q(snake: Snake, sess, nn, state):
 
 
 def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency: int, checkpoint_dir,
-            policyNetwork: NeuralNetwork, policySess, queue: Queue):
+            policyNetwork: List[NeuralNetwork], policySess, targetNetwork: List[NeuralNetwork],
+            targetSess, lock: Lock, queue: Queue):
     """
 
     :param max_time_steps:
@@ -120,7 +119,7 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
                     # Get state of snake
                     initial_state[idx] = Agent.getState(g.snakes[idx], pruned_snake_list, g.food, normalize=True)
                     # Choose action to take using epsilon greedy action
-                    actions_taken[idx] = epsilon_greedy_action(g.snakes[idx], policySess, policyNetwork, initial_state[idx], epsilon[idx])
+                    actions_taken[idx] = epsilon_greedy_action(g.snakes[idx], policySess[idx], policyNetwork[idx], initial_state[idx], epsilon[idx])
                     state[idx].append(initial_state[idx])  # keep track of state by appending it to list
                     action[idx].append([actions_taken[idx]])  # keep track of action by appending it to list
                     pastStateAlive[idx] = True
@@ -137,16 +136,19 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
 
             #Now we transition to the next state
             time_steps += 1
+            lock.acquire()
             T = queue.get()
             T += 1
             queue.put(T)
+            lock.release()
 
             # Every 500 time steps...
             if T % checkpointFrequency == 0:
                 # for each snake...
                 for idx in range(Constants.numberOfSnakes):
                     # Save policy and target network checkpoints
-                    policyNetwork.save_model(policySess, "{}/policy_{}_{}.ckpt".format(checkpoint_dir, T, idx))
+                    policyNetwork[idx].save_model(policySess[idx], "{}/policy_{}_{}.ckpt".format(checkpoint_dir, T, idx))
+                    targetNetwork[idx].save_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(checkpoint_dir, T, idx))
 
             # for each snake...
             for idx in range(Constants.numberOfSnakes):
@@ -158,14 +160,17 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
                     # if the game is over or snake is dead...
                     if not episodeRunning or not g.snakes[idx].alive:  # train on terminal
                         next_state_Q[idx].append([0])
+                        # thread waits here until thread lock is available
+                        lock.acquire()
                         # Update agent policy
-                        policyNetwork.train(policySess, state[idx], action[idx], reward[idx], next_state_Q[idx])
+                        policyNetwork[idx].train(policySess[idx], state[idx], action[idx], reward[idx], next_state_Q[idx])
+                        lock.release()
                         # clear lists
                         state[idx], action[idx], reward[idx], next_state_Q[idx] = [], [], [], []
                     else:
                         # get snake state and get next best action to take
                         final_state = Agent.getState(g.snakes[idx], pruned_snake_list, g.food, normalize=True)
-                        next_state_best_Q = best_q(g.snakes[idx], policySess, policyNetwork, [final_state])
+                        next_state_best_Q = best_q(g.snakes[idx], targetSess[idx], targetNetwork[idx], [final_state])
                         next_state_Q[idx].append([next_state_best_Q])
 
             # Update agent policy
@@ -173,8 +178,10 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
                 # for each snake
                 for idx in range(Constants.numberOfSnakes):
                     if pastStateAlive[idx] and g.snakes[idx].alive and episodeRunning: # train only if non-terminal, since terminal case is handled above
+                        lock.acquire()
                         # update agent policy
-                        policyNetwork.train(policySess, state[idx], action[idx], reward[idx], next_state_Q[idx])
+                        policyNetwork[idx].train(policySess[idx], state[idx], action[idx], reward[idx], next_state_Q[idx])
+                        lock.release()
                     state[idx], action[idx], reward[idx], next_state_Q[idx] = [], [], [], []
 
             T = queue.get()
@@ -182,7 +189,10 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
             if T % Constants.AQ_globalUpdateFrequency == 0:
                 for idx in range(Constants.numberOfSnakes):
                     checkpoint_path = "{}/transfer_{}.ckpt".format(checkpoint_dir, idx)
-                    policyNetwork.save_model(policySess, checkpoint_path)
+                    lock.acquire()
+                    policyNetwork[idx].save_model(policySess[idx], checkpoint_path)
+                    targetNetwork[idx].restore_model(targetSess[idx], checkpoint_path)
+                    lock.release()
 
             T = queue.get()
             queue.put(T)
@@ -198,7 +208,10 @@ def async_Q(max_time_steps: int, reward: int, penalty: int, checkpointFrequency:
     print("Thread {} complete.".format(get_ident()))
     # save policy and target models
     for idx in range(Constants.numberOfSnakes):
-        policyNetwork.save_model(policySess, "{}/policy_{}_{}.ckpt".format(checkpoint_dir, T+1, idx))
+        lock.acquire()
+        policyNetwork[idx].save_model(policySess[idx], "{}/policy_{}_{}.ckpt".format(checkpoint_dir, T+1, idx))
+        targetNetwork[idx].save_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(checkpoint_dir, T+1, idx))
+        lock.release()
 
 
 def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
@@ -219,6 +232,11 @@ def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
     :param load_time_step:
     :return:
     """
+    policyNetwork = []  # type: List[NeuralNetwork]
+    targetNetwork = []  # type: List[NeuralNetwork]
+    policySess = []     # type: List[tf.Session]
+    targetSess = []     # type: List[tf.Session]
+
     if os.path.isdir(checkpoint_dir):
         # if directory exists, delete it and its contents
         try:
@@ -227,26 +245,35 @@ def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
             print ("Error: %s - %s." % (e.filename, e.strerror))
     os.makedirs(checkpoint_dir)
 
-    idx = 0
     length = Agent.getStateLength()
-    #Initializing the neural net
-    # policyNetwork = FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer) # type: NeuralNetwork
-    policyNetwork = NeuralNet.NeuralNetwork(num_layers=4, size_of_layers=[9, 64, 4, 1], initializer='he', optimizer='adam')  # type: NeuralNetwork
-    policySess = tf.Session(graph=policyNetwork.graph)  # type: tf.Session
-    policyNetwork.init(policySess)
-    checkpoint_path = "{}/transfer_{}.ckpt".format(checkpoint_dir, idx)
-    policyNetwork.save_model(policySess, checkpoint_path)
+    #Initializing the 2*n neural nets
+    for idx in range(Constants.numberOfSnakes):
+        policyNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer))
+        targetNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer))
+        policySess.append(tf.Session(graph=policyNetwork[idx].graph))
+        targetSess.append(tf.Session(graph=targetNetwork[idx].graph))
+        policyNetwork[idx].init(policySess[idx])
+        targetNetwork[idx].init(targetSess[idx])
+        checkpoint_path = "{}/transfer_{}.ckpt".format(checkpoint_dir, idx)
+        policyNetwork[idx].save_model(policySess[idx], checkpoint_path)
+        targetNetwork[idx].restore_model(targetSess[idx], checkpoint_path)
 
     if load:  # resume training from old checkpoints
         for idx in range(Constants.numberOfSnakes):
-            policyNetwork.restore_model(policySess, "{}/policy_{}_{}.ckpt".format(load_dir, load_time_step, idx))
+            policyNetwork[idx].restore_model(policySess[idx], "{}/policy_{}_{}.ckpt".format(load_dir, load_time_step, idx))
+            targetNetwork[idx].restore_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(load_dir, load_time_step, idx))
 
     T = 0
     q = Queue()
     q.put(T)
-    async_Q(max_time_steps, reward, penalty, checkpointFrequency, checkpoint_dir,
-            policyNetwork, policySess, q)
+    lock = Lock()
+    threads = [Thread(target=async_Q, args=(max_time_steps, reward, penalty, checkpointFrequency, checkpoint_dir,
+                                            policyNetwork, policySess, targetNetwork, targetSess, lock, q)) for _ in range(num_threads)]
+    # map(lambda t: t.start(), threads)
+    for t in threads:
+        t.start()
 
+    print(threads)
     print("main complete")
 
 
@@ -276,17 +303,17 @@ def graphical_inference(size_of_hidden_layer: int = 20, load_dir = "checkpoints"
     pygame.display.set_caption("Snake Game")
     crashed = False
 
-    # if play:
-    #     targetNetwork.append(None)
-    #     targetSess.append(None)
-
+    targetNetwork = []  # type: List[NueralNetwork]
+    targetSess = []     # type: List[tf.Session]
+    if play:
+        targetNetwork.append(None)
+        targetSess.append(None)
     length = Agent.getStateLength()
-    # targetNetwork = FunctionApproximator(length, size_of_hidden_layer=20)
-    targetNetwork = NeuralNet.NeuralNetwork(num_layers=4, size_of_layers=[9, 64, 4, 1], initializer='he', optimizer='adam')
-    targetSess = tf.Session(graph=targetNetwork.graph)
-    idx = 0
-    targetNetwork.init(targetSess)
-    targetNetwork.restore_model(targetSess, "{}/policy_{}_{}.ckpt".format(load_dir, load_time_step, idx))
+    for idx in range(int(play), numSnakes):
+        targetNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer=size_of_hidden_layer))
+        targetSess.append(tf.Session(graph=targetNetwork[idx].graph))
+        targetNetwork[idx].init(targetSess[idx])
+        targetNetwork[idx].restore_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(load_dir, load_time_step, idx - int(play)))
 
     g = Game.Game(numSnakes)
     episodeRunning = True
@@ -306,7 +333,7 @@ def graphical_inference(size_of_hidden_layer: int = 20, load_dir = "checkpoints"
                 continue
             opponentSnakes = [opponent for opponent in g.snakes if opponent != snake]
             state = Agent.getState(snake, opponentSnakes, g.food, normalize=True)
-            action, _ = targetNetwork.max_permissible_Q(targetSess, [state], snake.permissible_actions())
+            action, _ = targetNetwork[i].max_permissible_Q(targetSess[i], [state], snake.permissible_actions())
             actionList.append(action)
 
         singleStepRewards, episodeRunning = g.move(actionList)

@@ -78,10 +78,10 @@ class Game:
                 snake.moveInDirection(actionsList[i])  # moves snake based on chosen action
                 # if the snake ate food, grow snake, destroy food, and reward agent
                 if snake.didEatFood(self.food):
-                    snake.incrementScore(1)
+                    snake.incrementScore(10)
                     snake.growSnake()
                     self.food.eatFood(snake.head, Snake.snakeList)
-                    single_step_rewards[i] = 1
+                    single_step_rewards[i] = 10
                     # if the snake hit a wall, kill snake and punish agent
                 elif snake.didHitWall():
                     snake.backtrack()
