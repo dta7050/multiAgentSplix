@@ -34,7 +34,7 @@ class NeuralNetwork:
 
             trainable_vars = tf.trainable_variables()  # list of trainable variables
             saver = tf.train.Saver(trainable_vars, max_to_keep=None)  # used for saving and restoring the weights of the hidden layers
-            train_op = optimizer.minimize(loss)  # network tries to minimize loss
+            train_op = optimizer.minimize(loss)  # network tries to minimize loss by changing trainable_vars
 
             global_init = tf.global_variables_initializer()  # initializes tensorflow global variables
         # Dictionary to access all these layers for running in session

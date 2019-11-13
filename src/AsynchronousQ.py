@@ -15,6 +15,7 @@ import Agent
 import FunctionApproximator
 import Game
 import Constants
+import NeuralNet
 
 from threading import Lock, Thread, get_ident
 from queue import Queue
@@ -24,6 +25,7 @@ from typing import List
 from Action import Action
 from Snake import Snake
 from FunctionApproximator import NeuralNetwork
+from NeuralNet import NeuralNetwork
 
 
 def epsilon_greedy_action(snake: Snake, sess, nn: NeuralNetwork, state, epsilon: float):
@@ -248,8 +250,10 @@ def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
     length = Agent.getStateLength()
     #Initializing the 2*n neural nets
     for idx in range(Constants.numberOfSnakes):
-        policyNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer))
-        targetNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer))
+        policyNetwork.append(NeuralNet.NeuralNetwork(num_layers=4, size_of_layers=[length, 64, 4, 1], initializer='he', optimizer='adam'))
+        targetNetwork.append(NeuralNet.NeuralNetwork(num_layers=4, size_of_layers=[length, 64, 4, 1], initializer='he', optimizer='adam'))
+        # policyNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer))
+        # targetNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer))
         policySess.append(tf.Session(graph=policyNetwork[idx].graph))
         targetSess.append(tf.Session(graph=targetNetwork[idx].graph))
         policyNetwork[idx].init(policySess[idx])
@@ -310,7 +314,8 @@ def graphical_inference(size_of_hidden_layer: int = 20, load_dir = "checkpoints"
         targetSess.append(None)
     length = Agent.getStateLength()
     for idx in range(int(play), numSnakes):
-        targetNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer=size_of_hidden_layer))
+        targetNetwork.append(NeuralNet.NeuralNetwork(num_layers=4, size_of_layers=[length, 64, 4, 1], initializer='he', optimizer='adam'))
+        #targetNetwork.append(FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer=size_of_hidden_layer))
         targetSess.append(tf.Session(graph=targetNetwork[idx].graph))
         targetNetwork[idx].init(targetSess[idx])
         targetNetwork[idx].restore_model(targetSess[idx], "{}/target_{}_{}.ckpt".format(load_dir, load_time_step, idx - int(play)))
