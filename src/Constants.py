@@ -3,7 +3,7 @@ which are used across the project"""
 
 # Constants relevant for the entire game
 globalEpisodeLength = 300  # Length of each learning/training episode, Type: int
-numberOfSnakes = 3  # Default number of snakes in each game, Type: int
+numberOfSnakes = 1  # Default number of snakes in each game, Type: int
 maximumFood = 10  # Maximum number of food points on the screen, Type: int
 gridSize = 30  # Size of game window, Type: int
 
