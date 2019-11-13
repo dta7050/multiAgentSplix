@@ -15,6 +15,7 @@ import Agent
 import FunctionApproximator
 import Game
 import Constants
+import NeuralNet
 
 from threading import Lock, Thread, get_ident
 from queue import Queue
@@ -24,6 +25,7 @@ from typing import List
 from Action import Action
 from Snake import Snake
 from FunctionApproximator import NeuralNetwork
+from NeuralNet import NeuralNetwork
 
 
 def epsilon_greedy_action(snake: Snake, sess, nn: NeuralNetwork, state, epsilon: float):
@@ -228,7 +230,8 @@ def train(max_time_steps: int = 1000, reward: int = 1, penalty: int = -10,
     idx = 0
     length = Agent.getStateLength()
     #Initializing the neural net
-    policyNetwork = FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer) # type: NeuralNetwork
+    # policyNetwork = FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer) # type: NeuralNetwork
+    policyNetwork = NeuralNet.NeuralNetwork(num_layers=4, size_of_layers=[9, 64, 4, 1], initializer='he', optimizer='adam')  # type: NeuralNetwork
     policySess = tf.Session(graph=policyNetwork.graph)  # type: tf.Session
     policyNetwork.init(policySess)
     checkpoint_path = "{}/transfer_{}.ckpt".format(checkpoint_dir, idx)
@@ -278,7 +281,8 @@ def graphical_inference(size_of_hidden_layer: int = 20, load_dir = "checkpoints"
     #     targetSess.append(None)
 
     length = Agent.getStateLength()
-    targetNetwork = FunctionApproximator.NeuralNetwork(length, size_of_hidden_layer=size_of_hidden_layer)
+    # targetNetwork = FunctionApproximator(length, size_of_hidden_layer=20)
+    targetNetwork = NeuralNet.NeuralNetwork(num_layers=4, size_of_layers=[9, 64, 4, 1], initializer='he', optimizer='adam')
     targetSess = tf.Session(graph=targetNetwork.graph)
     idx = 0
     targetNetwork.init(targetSess)

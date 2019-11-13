@@ -13,7 +13,7 @@ from typing import List
 
 class NeuralNetwork:
 
-    def __init__(self, data_length: int, size_of_hidden_layer: int = 20):
+    def __init__(self, num_layers: int = 4, size_of_layers: List[int] = [9, 20, 4, 1], initializer: str = 'xavier', optimizer: str = 'gradient descent'):
         """
         Initializes the network
         :param data_length: Length of the input data to the network
@@ -21,11 +21,22 @@ class NeuralNetwork:
         """
         self.graph = tf.Graph()
         with self.graph.as_default():
-            layers = self.create_model(data_length, size_of_hidden_layer)  # defines the neural network architecture
+            layers = self.create_model(num_layers, size_of_layers, initializer)  # defines the neural net architecture
             action = tf.placeholder(tf.int32, shape=[None, 1], name="action_selected")  # to be defined later
             Q_value = tf.batch_gather(layers[-1], action, name="Q")  # fetch the Q(s,a) value
 
-            optimizer = tf.train.GradientDescentOptimizer(learning_rate=Constants.AQ_lr)  # use gradient descent
+            if optimizer == 'gradient descent':
+                opt = tf.train.GradientDescentOptimizer(learning_rate=Constants.AQ_lr)  # use gradient descent
+            elif optimizer == 'adadelta':
+                opt = tf.train.AdadeltaOptimizer(learning_rate=Constants.AQ_lr)
+            elif optimizer == 'adagrad':
+                opt = tf.train.AdagradOptimizer(learning_rate=Constants.AQ_lr)
+            elif optimizer == 'adagradda':
+                opt = tf.train.AdagradDAOptimizer(learning_rate=Constants.AQ_lr)
+            elif optimizer == 'adam':
+                opt = tf.train.AdamOptimizer(learning_rate=Constants.AQ_lr)
+            else:
+                print("please use appropriate optimizer")
 
             reward = tf.placeholder(tf.float32, shape=[None, 1], name="reward")
             best_Q = tf.placeholder(tf.float32, shape=[None, 1], name="best_next_state_Q")
@@ -36,7 +47,7 @@ class NeuralNetwork:
 
             trainable_vars = tf.trainable_variables()  # list of trainable variables
             saver = tf.train.Saver(trainable_vars, max_to_keep=None)  # used for saving and restoring the weights of the hidden layers
-            train_op = optimizer.minimize(loss)  # network tries to minimize loss
+            train_op = opt.minimize(loss)  # network tries to minimize loss
 
             global_init = tf.global_variables_initializer()  # initializes tensorflow global variables
         # Dictionary to access all these layers for running in session
@@ -56,11 +67,11 @@ class NeuralNetwork:
         self.model["init"] = global_init
         return
 
-    def create_model(self, num_layers: int, size_of_layers: List[int]) -> List:
+    def create_model(self, num_layers: int, size_of_layers: List[int], initializer: str) -> List:
         """
         Actually creates the neural network
         :param data_length: Length of input data to the network
-        :param size_of_hidden_layer: Number of neurons in the hawdhfidden layer
+        :param size_of_hidden_layer: Number of neurons in the hidden layer
         :return: A list of the layers
         """
         layers = []  # initialize list of layers
@@ -68,15 +79,25 @@ class NeuralNetwork:
         for i in range(num_layers):
             layers.append(0)  # add a placeholder zero for every layer in the network
 
-        xavier_init = tf.contrib.layers.xavier_initializer()  # used to initialize weights
-        layers[0] = tf.placeholder(tf.float32, shape=[None, data_length], name="data")  # input layer
-        layers[1] = tf.layers.dense(layers[0], size_of_hidden_layer,
-                                    kernel_initializer=xavier_init, use_bias=True,
-                                    activation=tf.nn.relu, name="hidden")  # hidden layer
-        layers[2] = tf.layers.dense(layers[1], 4,  # one for each action
-                                    kernel_initializer=xavier_init, use_bias=True,
-                                    activation=tf.nn.relu, name="out")  # action layer, one neuron for each action
-        layers[3] = tf.nn.softmax(layers[2], name="softmax")  # performs softmax to determine action to take
+        if initializer == 'xavier':
+            weight_init = tf.contrib.layers.xavier_initializer()  # initialize weights using Xavier initialization
+        elif initializer == 'he':
+            weight_init = tf.contrib.layers.variance_scaling_initializer()  # initialize weights using He initialization
+        else:
+            print("unknown initializer")
+
+        for j in range(num_layers):
+            if not j:  # j == 0
+                layers[j] = tf.placeholder(tf.float32, shape=[None, size_of_layers[j]], name="data")  # input layer
+            elif j < (num_layers - 1):
+                layers[j] = tf.layers.dense(layers[j-1], size_of_layers[j],
+                                            kernel_initializer=weight_init, use_bias=True,
+                                            activation=tf.nn.relu, name=("hidden" + str(j)))  # hidden layer
+            elif j == num_layers - 1:
+                layers[j] = tf.nn.softmax(layers[j-1], name="softmax")  # performs softmax to determine action to take
+            else:
+                print("the thing didn't work (NeuralNet.create_model())")
+
         return layers
 
     def save_model(self, sess, path):
